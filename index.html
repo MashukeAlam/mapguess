@@ -1,0 +1,543 @@
+<!doctype html>
+<html lang="en" class="">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>FlagFill Quiz — Guess the Country</title>
+    <meta
+      name="description"
+      content="FlagFill Quiz: guess the country from its flag emoji. Pick from four masked country names and keep your streak alive."
+    />
+    <meta name="robots" content="index,follow" />
+    <meta name="theme-color" content="#0b1220" />
+
+    <script>
+      // Tailwind CDN config
+      window.tailwind = {
+        config: {
+          darkMode: "class",
+          theme: {
+            extend: {
+              keyframes: {
+                pop: {
+                  "0%": { transform: "scale(0.98)", opacity: "0.6" },
+                  "100%": { transform: "scale(1)", opacity: "1" },
+                },
+              },
+              animation: {
+                pop: "pop 220ms ease-out",
+              },
+            },
+          },
+        },
+      };
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+      /* tiny helper to keep the letter boxes aligned nicely */
+      .ff-letter {
+        font-variant-numeric: tabular-nums;
+        letter-spacing: 0.02em;
+      }
+    </style>
+  </head>
+
+  <body
+    class="min-h-dvh bg-slate-50 text-slate-900 antialiased selection:bg-slate-900 selection:text-white dark:bg-slate-950 dark:text-slate-100"
+  >
+    <div class="mx-auto flex min-h-dvh max-w-3xl flex-col px-4 py-6 sm:px-6">
+      <!-- Header -->
+      <header class="flex items-center justify-between gap-3">
+        <div class="min-w-0">
+          <h1 class="truncate text-lg font-semibold tracking-tight sm:text-xl">
+            FlagFill Quiz
+          </h1>
+          <p class="text-sm text-slate-600 dark:text-slate-400">
+            Guess the country from the flag — fill the missing letters.
+          </p>
+        </div>
+
+        <button
+          id="themeBtn"
+          type="button"
+          class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800 dark:focus:ring-slate-700"
+          aria-label="Toggle theme"
+        >
+          <span id="themeIcon" class="leading-none">☾</span>
+          <span class="ml-2 hidden sm:inline"></span>
+        </button>
+      </header>
+
+      <!-- Main card -->
+      <main class="flex flex-1 flex-col justify-center">
+        <section
+          class="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6"
+        >
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <div class="text-sm font-medium text-slate-600 dark:text-slate-400">
+                Current streak
+              </div>
+              <div class="mt-1 flex items-baseline gap-3">
+                <div class="text-3xl font-semibold tracking-tight" id="streak">0</div>
+                <div class="text-sm text-slate-600 dark:text-slate-400">
+                  Best: <span class="font-medium text-slate-900 dark:text-slate-100" id="best">0</span>
+                </div>
+              </div>
+            </div>
+
+            <button
+              id="skipBtn"
+              type="button"
+              class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-300 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800 dark:focus:ring-slate-700"
+              title="New flag"
+            >
+              New
+            </button>
+          </div>
+
+          <div class="mt-6 flex flex-col items-center">
+            <div
+              id="flag"
+              class="select-none text-7xl leading-none sm:text-8xl"
+              aria-label="Country flag"
+            >
+              🏳️
+            </div>
+
+            <div class="mt-3 text-sm text-slate-600 dark:text-slate-400">
+              Pick the correct masked country name.
+            </div>
+
+            <div
+              id="status"
+              class="sr-only"
+              role="status"
+              aria-live="polite"
+            ></div>
+          </div>
+
+          <div
+            id="options"
+            class="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2"
+          ></div>
+
+          <div class="mt-5 text-xs text-slate-500 dark:text-slate-400">
+            Tip: The blanks are missing letters — not spaces.
+          </div>
+        </section>
+
+        <footer class="mt-6 text-center text-xs text-slate-500 dark:text-slate-500">
+          Lightweight, offline-friendly, no trackers.
+        </footer>
+      </main>
+    </div>
+
+    <script>
+      // ---------- Data ----------
+      // Note: country names are English; flags are emoji regional indicators.
+      const COUNTRIES = [
+        { name: "Canada", flag: "🇨🇦" },
+        { name: "United States", flag: "🇺🇸" },
+        { name: "Mexico", flag: "🇲🇽" },
+        { name: "Brazil", flag: "🇧🇷" },
+        { name: "Argentina", flag: "🇦🇷" },
+        { name: "Chile", flag: "🇨🇱" },
+        { name: "Colombia", flag: "🇨🇴" },
+        { name: "Peru", flag: "🇵🇪" },
+        { name: "Spain", flag: "🇪🇸" },
+        { name: "Portugal", flag: "🇵🇹" },
+        { name: "France", flag: "🇫🇷" },
+        { name: "Germany", flag: "🇩🇪" },
+        { name: "Italy", flag: "🇮🇹" },
+        { name: "Netherlands", flag: "🇳🇱" },
+        { name: "Belgium", flag: "🇧🇪" },
+        { name: "Switzerland", flag: "🇨🇭" },
+        { name: "Austria", flag: "🇦🇹" },
+        { name: "Poland", flag: "🇵🇱" },
+        { name: "Czechia", flag: "🇨🇿" },
+        { name: "Sweden", flag: "🇸🇪" },
+        { name: "Norway", flag: "🇳🇴" },
+        { name: "Denmark", flag: "🇩🇰" },
+        { name: "Finland", flag: "🇫🇮" },
+        { name: "Ireland", flag: "🇮🇪" },
+        { name: "United Kingdom", flag: "🇬🇧" },
+        { name: "Greece", flag: "🇬🇷" },
+        { name: "Turkey", flag: "🇹🇷" },
+        { name: "Egypt", flag: "🇪🇬" },
+        { name: "Morocco", flag: "🇲🇦" },
+        { name: "Tunisia", flag: "🇹🇳" },
+        { name: "South Africa", flag: "🇿🇦" },
+        { name: "Nigeria", flag: "🇳🇬" },
+        { name: "Kenya", flag: "🇰🇪" },
+        { name: "Ethiopia", flag: "🇪🇹" },
+        { name: "Saudi Arabia", flag: "🇸🇦" },
+        { name: "United Arab Emirates", flag: "🇦🇪" },
+        { name: "Israel", flag: "🇮🇱" },
+        { name: "India", flag: "🇮🇳" },
+        { name: "Pakistan", flag: "🇵🇰" },
+        { name: "Bangladesh", flag: "🇧🇩" },
+        { name: "Sri Lanka", flag: "🇱🇰" },
+        { name: "Thailand", flag: "🇹🇭" },
+        { name: "Vietnam", flag: "🇻🇳" },
+        { name: "Malaysia", flag: "🇲🇾" },
+        { name: "Singapore", flag: "🇸🇬" },
+        { name: "Indonesia", flag: "🇮🇩" },
+        { name: "Philippines", flag: "🇵🇭" },
+        { name: "China", flag: "🇨🇳" },
+        { name: "Japan", flag: "🇯🇵" },
+        { name: "South Korea", flag: "🇰🇷" },
+        { name: "Australia", flag: "🇦🇺" },
+        { name: "New Zealand", flag: "🇳🇿" }
+      ];
+
+      // ---------- State ----------
+      const els = {
+        flag: document.getElementById("flag"),
+        options: document.getElementById("options"),
+        streak: document.getElementById("streak"),
+        best: document.getElementById("best"),
+        status: document.getElementById("status"),
+        themeBtn: document.getElementById("themeBtn"),
+        themeIcon: document.getElementById("themeIcon"),
+        skipBtn: document.getElementById("skipBtn"),
+      };
+
+      const STORAGE = {
+        theme: "flagfill_theme",
+        best: "flagfill_bestStreak",
+      };
+
+      const prefersReducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ?? false;
+
+      let current = null; // { answer: {name,flag}, options: [...], correctIndex }
+      let locked = false;
+      let streak = 0;
+      let bestStreak = 0;
+
+      // ---------- Utils ----------
+      function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
+
+      function shuffle(array) {
+        const a = array.slice();
+        for (let i = a.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [a[i], a[j]] = [a[j], a[i]];
+        }
+        return a;
+      }
+
+      function pickOne(array) {
+        return array[Math.floor(Math.random() * array.length)];
+      }
+
+      function pickManyUnique(array, count, excludeSet = new Set()) {
+        const pool = array.filter((x) => !excludeSet.has(x));
+        return shuffle(pool).slice(0, count);
+      }
+
+      function setStatus(text) {
+        els.status.textContent = text;
+      }
+
+      function loadBest() {
+        const raw = localStorage.getItem(STORAGE.best);
+        const n = raw == null ? 0 : Number(raw);
+        bestStreak = Number.isFinite(n) && n >= 0 ? Math.floor(n) : 0;
+        els.best.textContent = String(bestStreak);
+      }
+
+      function saveBest() {
+        localStorage.setItem(STORAGE.best, String(bestStreak));
+        els.best.textContent = String(bestStreak);
+      }
+
+      function setStreak(n) {
+        streak = n;
+        els.streak.textContent = String(streak);
+        if (streak > bestStreak) {
+          bestStreak = streak;
+          saveBest();
+        }
+      }
+
+      function getThemePreference() {
+        const saved = localStorage.getItem(STORAGE.theme);
+        if (saved === "dark" || saved === "light") return saved;
+        const systemDark = window.matchMedia?.("(prefers-color-scheme: dark)")?.matches ?? false;
+        return systemDark ? "dark" : "light";
+      }
+
+      function applyTheme(theme) {
+        const isDark = theme === "dark";
+        document.documentElement.classList.toggle("dark", isDark);
+        els.themeIcon.textContent = isDark ? "☀" : "☾";
+        localStorage.setItem(STORAGE.theme, theme);
+      }
+
+      function isLetter(ch) {
+        return /[A-Z]/.test(ch);
+      }
+
+      function maskName(name) {
+        const upper = name.toUpperCase();
+        const chars = Array.from(upper);
+        const letterPositions = [];
+        for (let i = 0; i < chars.length; i++) {
+          if (isLetter(chars[i])) letterPositions.push(i);
+        }
+
+        // Keep it fair: always show at least 2 letters (when possible),
+        // and never hide the first or last letter.
+        const letterCount = letterPositions.length;
+        const hideCount = clamp(Math.floor(letterCount * 0.45), letterCount >= 6 ? 2 : 1, Math.max(1, letterCount - 2));
+
+        const forbidden = new Set([letterPositions[0], letterPositions[letterPositions.length - 1]]);
+        const candidates = letterPositions.filter((p) => !forbidden.has(p));
+        const toHide = new Set(shuffle(candidates).slice(0, hideCount));
+
+        // Ensure we actually hide something for short names
+        if (toHide.size === 0 && candidates.length > 0) toHide.add(candidates[0]);
+
+        return chars.map((ch, idx) => {
+          if (ch === " ") return { type: "space" };
+          if (!isLetter(ch)) return { type: "punct", ch };
+          return { type: "letter", ch, hidden: toHide.has(idx) };
+        });
+      }
+
+      // ---------- Rendering ----------
+      function letterBoxClasses({ hidden }) {
+        // professional, low-noise styling; color changes happen on button state
+        return [
+          "ff-letter",
+          "inline-flex items-center justify-center",
+          "h-10 w-8 sm:h-11 sm:w-9",
+          "rounded-lg border",
+          "text-sm sm:text-base font-semibold",
+          "transition-colors",
+          hidden ? "text-transparent" : "text-slate-900 dark:text-slate-100",
+          "border-slate-200 dark:border-slate-800",
+          "bg-white/70 dark:bg-slate-950/30"
+        ].join(" ");
+      }
+
+      function buildMaskedNameNode(maskedTokens, optionId) {
+        const wrap = document.createElement("div");
+        wrap.className = "flex flex-wrap items-center gap-1.5";
+
+        let letterIndex = 0;
+
+        for (const token of maskedTokens) {
+          if (token.type === "space") {
+            const spacer = document.createElement("span");
+            spacer.className = "w-2";
+            spacer.setAttribute("aria-hidden", "true");
+            wrap.appendChild(spacer);
+            continue;
+          }
+
+          if (token.type === "punct") {
+            const el = document.createElement("span");
+            el.className =
+              "inline-flex h-10 w-5 items-center justify-center text-slate-600 dark:text-slate-400";
+            el.textContent = token.ch;
+            wrap.appendChild(el);
+            continue;
+          }
+
+          // letter
+          const box = document.createElement("span");
+          box.className = letterBoxClasses({ hidden: token.hidden });
+          box.dataset.optionId = optionId;
+          box.dataset.letterIndex = String(letterIndex++);
+          box.dataset.letter = token.ch;
+          box.dataset.hidden = token.hidden ? "1" : "0";
+
+          if (!token.hidden) box.textContent = token.ch;
+          wrap.appendChild(box);
+        }
+
+        return wrap;
+      }
+
+      function optionButtonBaseClasses() {
+        return [
+          "group",
+          "w-full",
+          "rounded-2xl border",
+          "bg-white p-4 text-left shadow-sm",
+          "transition",
+          "hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-300",
+          "disabled:cursor-not-allowed",
+          "dark:bg-slate-900 dark:hover:bg-slate-800 dark:focus:ring-slate-700",
+          "border-slate-200 dark:border-slate-800",
+        ].join(" ");
+      }
+
+      function setOptionVisualState(btn, state) {
+        // state: "idle" | "correct" | "wrong"
+        btn.dataset.state = state;
+
+        btn.classList.remove(
+          "border-emerald-300", "bg-emerald-50", "dark:bg-emerald-950/30", "dark:border-emerald-800",
+          "border-rose-300", "bg-rose-50", "dark:bg-rose-950/30", "dark:border-rose-800"
+        );
+
+        if (state === "correct") {
+          btn.classList.add("border-emerald-300", "bg-emerald-50", "dark:bg-emerald-950/30", "dark:border-emerald-800");
+        } else if (state === "wrong") {
+          btn.classList.add("border-rose-300", "bg-rose-50", "dark:bg-rose-950/30", "dark:border-rose-800");
+        }
+      }
+
+      function renderRound(round) {
+        els.flag.textContent = round.answer.flag;
+        els.flag.classList.remove("animate-pop");
+        void els.flag.offsetWidth; // reflow to restart animation
+        els.flag.classList.add("animate-pop");
+
+        els.options.innerHTML = "";
+        locked = false;
+        els.skipBtn.disabled = false;
+
+        round.options.forEach((opt, idx) => {
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = optionButtonBaseClasses();
+          btn.setAttribute("aria-label", `Option ${idx + 1}`);
+          btn.dataset.index = String(idx);
+          setOptionVisualState(btn, "idle");
+
+          const topRow = document.createElement("div");
+          topRow.className = "flex items-center justify-between gap-3";
+
+          const label = document.createElement("div");
+          label.className = "text-xs font-medium text-slate-600 dark:text-slate-400";
+          label.textContent = `Option ${idx + 1}`;
+
+          const hint = document.createElement("div");
+          hint.className = "text-xs text-slate-500 dark:text-slate-500";
+          hint.textContent = ""; // intentionally minimal
+
+          topRow.appendChild(label);
+          topRow.appendChild(hint);
+
+          const maskedNode = buildMaskedNameNode(opt.masked, String(idx));
+          maskedNode.classList.add("mt-2");
+
+          btn.appendChild(topRow);
+          btn.appendChild(maskedNode);
+
+          btn.addEventListener("click", () => onPick(idx));
+          els.options.appendChild(btn);
+        });
+
+        setStatus("New round loaded.");
+      }
+
+      // ---------- Gameplay ----------
+      function newRound() {
+        const answer = pickOne(COUNTRIES);
+        const exclude = new Set([answer]);
+        const decoys = pickManyUnique(COUNTRIES, 3, exclude);
+        const opts = shuffle([answer, ...decoys]).map((c) => ({
+          name: c.name,
+          masked: maskName(c.name),
+        }));
+        const correctIndex = opts.findIndex((o) => o.name === answer.name);
+
+        current = { answer, options: opts, correctIndex };
+        renderRound(current);
+      }
+
+      function disableAllOptions() {
+        for (const btn of els.options.querySelectorAll("button")) {
+          btn.disabled = true;
+        }
+      }
+
+      function revealMissingLetters(optionIndex) {
+        const optionId = String(optionIndex);
+        const boxes = Array.from(
+          els.options.querySelectorAll(`[data-option-id="${optionId}"][data-hidden="1"]`)
+        );
+
+        if (boxes.length === 0) return;
+
+        const doReveal = (box) => {
+          // Put letter in, then animate into place
+          box.textContent = box.dataset.letter || "";
+          box.classList.remove("text-transparent");
+          box.classList.add("text-slate-900", "dark:text-slate-100");
+          box.classList.add("opacity-0", "translate-y-0.5");
+          box.classList.add("transition-all", "duration-200", "ease-out");
+          requestAnimationFrame(() => {
+            box.classList.remove("opacity-0", "translate-y-0.5");
+            box.classList.add("opacity-100", "translate-y-0");
+          });
+        };
+
+        if (prefersReducedMotion) {
+          boxes.forEach(doReveal);
+          return;
+        }
+
+        boxes.forEach((box, i) => {
+          window.setTimeout(() => doReveal(box), i * 55);
+        });
+      }
+
+      function onPick(index) {
+        if (!current || locked) return;
+        locked = true;
+        els.skipBtn.disabled = true;
+
+        const buttons = Array.from(els.options.querySelectorAll("button"));
+        const pickedBtn = buttons[index];
+
+        disableAllOptions();
+
+        const correct = index === current.correctIndex;
+
+        if (correct) {
+          setOptionVisualState(pickedBtn, "correct");
+          setStatus("Correct. Streak increased.");
+          setStreak(streak + 1);
+          revealMissingLetters(index);
+
+          window.setTimeout(() => {
+            newRound();
+          }, prefersReducedMotion ? 300 : 1100);
+        } else {
+          setOptionVisualState(pickedBtn, "wrong");
+          setStatus("Wrong. Streak reset.");
+          setStreak(0);
+
+          window.setTimeout(() => {
+            newRound();
+          }, prefersReducedMotion ? 300 : 800);
+        }
+      }
+
+      // ---------- Wire up ----------
+      els.themeBtn.addEventListener("click", () => {
+        const isDark = document.documentElement.classList.contains("dark");
+        applyTheme(isDark ? "light" : "dark");
+      });
+
+      els.skipBtn.addEventListener("click", () => {
+        if (locked) return;
+        newRound();
+      });
+
+      // Init
+      applyTheme(getThemePreference());
+      loadBest();
+      setStreak(0);
+      newRound();
+    </script>
+  </body>
+</html>
